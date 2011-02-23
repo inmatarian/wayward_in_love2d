@@ -100,7 +100,7 @@ function love.update(dt)
   updateJoy()
 
   if focused then
-    if dt > 0.1 then dt = 0.1 end
+    if dt > 0.035 then dt = 0.035 end
     state:update(dt)
   end
 end

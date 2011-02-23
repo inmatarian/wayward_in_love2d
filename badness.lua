@@ -48,8 +48,8 @@ function Badness:run()
   local STEP = 0.005
 
   for i = 1, #self.list do
-    self.list[i].visible = true
     self:wait(STEP)
+    self.list[i].visible = true
   end
 
   self:wait(1.5)
