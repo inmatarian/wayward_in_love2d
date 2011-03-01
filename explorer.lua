@@ -37,9 +37,9 @@ function Player:update(dt)
     elseif friend.pressed("down") then self.dir = "down"
     elseif friend.pressed("left") then self.dir = "left"
     elseif friend.pressed("right") then self.dir = "right"
-    elseif friend.pressed("f9") then self.x, self.y = 32, 32
     else self.dir = nil end
   end
+  if friend.pressed("f9") then self.x, self.y = 32, 32 end
 
   Sprite.update(self, dt)
 end
@@ -67,6 +67,7 @@ end
 
 function Explorer:inspect()
   local p = self.player
+  love.graphics.setColor( 255, 64, 255 )
   love.graphics.print( "X: "..util.truncate(p.x,0.001), 4, 4 )
   love.graphics.print( "Y: "..util.truncate(p.y,0.001), 4, 14 )
   love.graphics.print( "dir: "..(p.dir or "nil"), 4, 24 )
@@ -94,6 +95,8 @@ function Explorer:enter()
                function(...) self.layer = Layer.gameLoadLayer(...) end,
                function(...) self.sprites = Sprite.gameLoadSprites(...) end )
   self.camera:setTileset( self.tileset )
+
+  self.layer:addSprites( self.player, self.sprites )
 end
 
 return Explorer

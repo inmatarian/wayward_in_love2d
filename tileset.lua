@@ -1,11 +1,15 @@
 
 local util = require 'util'
 local prototype = require 'prototype'
-local friend = require 'friend'
 
 ----------------------------------------
 
 local Tileset = prototype:clone()
+
+function Tileset:init( image, quads )
+  self.image = image
+  self.quads = quads
+end
 
 function Tileset:drawTile( x, y, index )
   love.graphics.drawq( self.image, self.quads[index], x, y )
@@ -38,9 +42,7 @@ function Tileset.gameLoadTileset( name, filename, width, height, firstgid, tilew
     y = y + tileheight
   end
 
-  local tileset = Tileset:clone()
-  tileset.image = tileimage
-  tileset.quads = quads
+  local tileset = Tileset:new( tileimage, quads )
   return tileset
 end
 

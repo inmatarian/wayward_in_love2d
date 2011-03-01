@@ -1,7 +1,6 @@
 
 local util = require 'util'
 local prototype = require 'prototype'
-local friend = require 'friend'
 
 ----------------------------------------
 
@@ -14,7 +13,8 @@ local Sprite = prototype:clone {
   dir = nil,
   moving = nil,
   excess = 0,
-  speed = 64
+  speed = 64,
+  layer = nil
 }
 
 function Sprite:init( x, y )
@@ -30,11 +30,47 @@ function Sprite:init( x, y )
   end
 end
 
+function Sprite:setLayer( l )
+  self.layer = l
+end
+
+function Sprite:isBlocked( dir )
+  if not self.layer then return false end
+
+  local cx, cy = self.layer:convToLayer( self.x, self.y )
+
+  if dir == "up" then cy = cy - 1
+  elseif dir == "down" then cy = cy + 1
+  elseif dir == "left" then cx = cx - 1
+  elseif dir == "right" then cx = cx + 1
+  end
+
+  return self.layer:isSolid( cx, cy )
+end
+
+function Sprite:otherSprite( dir )
+  local cx, cy = self.layer:convToLayer( self.x, self.y )
+  if dir == "up" then cy = cy - 1
+  elseif dir == "down" then cy = cy + 1
+  elseif dir == "left" then cx = cx - 1
+  elseif dir == "right" then cx = cx + 1
+  end
+
+  for _, v in ipairs(self.layer.sprites) do
+    local sx, sy = self.layer:convToLayer( v.x, v.y )
+    if sx==cx and sy==cy then return v end
+  end
+end
+
 function Sprite:update(dt)
   local speed = self.speed * dt
   local excess = self.excess
   self.excess = 0
-  local inmove = self.moving~=nil and true or false
+  local inmove = self.moving~=nil
+  if (not inmove) and self.dir~=nil then
+    if self:isBlocked(self.dir) then return end
+    if self:otherSprite(self.dir) then return end
+  end
   self.moving = self.moving or self.dir
 
   if self.moving=="up" then
