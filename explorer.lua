@@ -31,7 +31,11 @@ end
 
 local Player = Sprite:clone()
 
-function Player:update(dt)
+function Player:init(...)
+  Sprite.init(self, ...)
+end
+
+function Player:behavior(dt)
   if not self.dir or not friend.pressed(self.dir) then
     if friend.pressed("up") then self.dir = "up"
     elseif friend.pressed("down") then self.dir = "down"
@@ -39,9 +43,8 @@ function Player:update(dt)
     elseif friend.pressed("right") then self.dir = "right"
     else self.dir = nil end
   end
-  if friend.pressed("f9") then self.x, self.y = 32, 32 end
-
-  Sprite.update(self, dt)
+  if friend.pressed("f9") == 1 then self.x, self.y = 32, 32 end
+  if friend.pressed("f8") == 1 then self.layer:inspect() end
 end
 
 ----------------------------------------
@@ -57,10 +60,7 @@ function Explorer:init()
 end
 
 function Explorer:update(dt)
-  self.player:update(dt)
-  for _, v in ipairs(self.sprites) do
-    v:update(dt)
-  end
+  self.layer:update(dt)
   self.layer:centerOn( self.player )
   self.lastDT = dt
 end

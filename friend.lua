@@ -23,7 +23,7 @@ function love.focus(f)
 end
 
 function love.joystickpressed(j, b)
-  joyb[b] = 1
+  joyb[b] = 0
 end
 
 function love.joystickreleased(j, b)
@@ -31,7 +31,7 @@ function love.joystickreleased(j, b)
 end
 
 function love.keypressed(k, u)
-  keyp[k] = 1
+  keyp[k] = 0
   if k == "f10" then
     love.event.push("q")
   end
@@ -143,7 +143,9 @@ local function joy(s)
 end
 
 local function pressed(s)
-  return keyp[s] or joyb[s]
+  if keyp[s] then return keyp[s] end
+  if joyb[s] then return joyb[s] end
+  return false
 end
 
 ----------------------------------------

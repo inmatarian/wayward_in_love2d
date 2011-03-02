@@ -4,6 +4,22 @@ local prototype = require 'prototype'
 
 ----------------------------------------
 
+
+local dirs = { "up", "down", "left", "right" }
+function testBehavior( self, dt )
+  self.clock = (self.clock or 0) + dt
+
+  if self.clock >= 3 then
+    self.clock = self.clock - 3
+    local t = math.random(1, 4)
+    self.dir = dirs[t]
+  else
+    self.dir = nil
+  end
+end
+
+----------------------------------------
+
 local Sprite = prototype:clone {
   x = 0,
   y = 0,
@@ -24,9 +40,15 @@ function Sprite:init( x, y )
     self.w = x.w
     self.h = x.h
     self.gid = x.gid
+    if x.type == "PLAYER" then
+      print("PLAYER FOUND!")
+      self.behavior = testBehavior
+    end
   elseif x or y then
     self.x = x
     self.y = y
+    self.w = 16
+    self.h = 16
   end
 end
 
@@ -56,13 +78,14 @@ function Sprite:otherSprite( dir )
   elseif dir == "right" then cx = cx + 1
   end
 
-  for _, v in ipairs(self.layer.sprites) do
-    local sx, sy = self.layer:convToLayer( v.x, v.y )
-    if sx==cx and sy==cy then return v end
-  end
+  return self.layer:spriteAt( cx, cy )
 end
 
 function Sprite:update(dt)
+  local oldx, oldy, oldw, oldh = self.x, self.y, self.w, self.h
+
+  if self.behavior then self:behavior(dt) end
+
   local speed = self.speed * dt
   local excess = self.excess
   self.excess = 0
@@ -113,6 +136,8 @@ function Sprite:update(dt)
     end
     self.x = nx
   end
+
+  self.layer:updateHash( self, oldx, oldy, oldw, oldh )
 end
 
 function Sprite:draw( camera )
