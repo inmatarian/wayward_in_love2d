@@ -16,6 +16,9 @@ local startTime = love.timer.getMicroTime()
 local xscale = math.floor(love.graphics.getWidth() / 320)
 local yscale = math.floor(love.graphics.getHeight() / 240)
 
+local wayfont
+local wayfontset = [=[ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~]=]
+
 ----------------------------------------
 
 function love.focus(f)
@@ -110,54 +113,56 @@ function love.load()
   love.graphics.setColorMode("modulate")
   love.graphics.setBlendMode("alpha")
   hasJoy = (love.joystick.getNumJoysticks()>=1) and (love.joystick.isOpen(0))
+
+  local wayfontimage = love.graphics.newImage("wayfont.png")
+  wayfontimage:setFilter("nearest", "nearest")
+  wayfont = love.graphics.newImageFont(wayfontimage, wayfontset)
+  wayfont:setLineHeight( wayfontimage:getHeight()-1 )
 end
 
 ----------------------------------------
+local friend = {}
+----------------------------------------
 
-local function setState(s)
+function friend.setState(s)
   if state and state.exit then state:exit() end
   state = s
   if state and state.enter then state:enter() end
 end
 
-local function playMod( mod )
-  stopMod()
+function friend.playMod( mod )
+  friend.stopMod()
   bgm = love.audio.newSource(mod, "stream")
   bgm:setLooping( true )
   bgm:setVolume(0.2)
   love.audio.play(bgm)
 end
 
-local function stopMod()
+function friend.stopMod()
   if not bgm then return end
   love.audio.stop(bgm)
   bgm = nil
 end
 
-local function key(s)
+function friend.key(s)
   return keyp[s]
 end
 
-local function joy(s)
+function friend.joy(s)
   return joyb[s]
 end
 
-local function pressed(s)
+function friend.pressed(s)
   if keyp[s] then return keyp[s] end
   if joyb[s] then return joyb[s] end
   return false
 end
 
+function friend.font()
+  return wayfont
+end
+
 ----------------------------------------
-
-return {
-  setState = setState;
-  playMod = playMod;
-  stopMod = stopMod;
-  key = key;
-  joy = joy;
-  pressed = pressed;
-}
-
+return friend
 ----------------------------------------
 

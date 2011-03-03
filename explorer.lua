@@ -55,7 +55,7 @@ local Explorer = prototype:clone()
 function Explorer:init()
   self.player = Player:new(32, 32)
   self.camera = Camera:new()
-  self.font = love.graphics.newFont( 10 )
+  self.font = friend.font()
   self.lastDT = 0
 end
 
@@ -65,15 +65,23 @@ function Explorer:update(dt)
   self.lastDT = dt
 end
 
+local function textRend( font, x, y, overlap, text, ... )
+  for c in string.format(text, ...):gmatch('.') do
+    love.graphics.print(c, x, y)
+    x = x + font:getWidth(c) - overlap
+  end
+end
+
 function Explorer:inspect()
-  local p = self.player
+  local p, f = self.player, self.font
+  local h, o, x, y = f:getLineHeight(), 2, 4, 4
   love.graphics.setColor( 255, 64, 255 )
-  love.graphics.print( "X: "..util.truncate(p.x,0.001), 4, 4 )
-  love.graphics.print( "Y: "..util.truncate(p.y,0.001), 4, 14 )
-  love.graphics.print( "dir: "..(p.dir or "nil"), 4, 24 )
-  love.graphics.print( "moving: "..(p.moving or "nil"), 4, 34 )
-  love.graphics.print( "excess: "..util.truncate(p.excess,0.001), 4, 44 )
-  love.graphics.print( "dt: "..util.truncate(self.lastDT,0.001), 4, 54 )
+  textRend( f, x, y, o, "X: %.3f", p.x )
+  textRend( f, x, y+h, o, "Y: %.3f", p.y )
+  textRend( f, x, y+h*2, o, "dir: %s", (p.dir or "nil") )
+  textRend( f, x, y+h*3, o, "moving: %s", (p.moving or "nil") )
+  textRend( f, x, y+h*4, o, "excess: %.3f", p.excess )
+  textRend( f, x, y+h*5, o, "dt: %.3f", self.lastDT )
 end
 
 function Explorer:draw()
