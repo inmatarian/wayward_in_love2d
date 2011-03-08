@@ -1,4 +1,5 @@
-
+-- Prototype
+-- Freeform Class definitions
 ----------------------------------------
 
 local function clone( base, inst )

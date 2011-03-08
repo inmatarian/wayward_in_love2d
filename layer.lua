@@ -27,6 +27,7 @@ function Layer:addSprite(...)
         print("layer adding sprite", s)
         table.insert(self.sprites, s)
         s:setLayer(self)
+        self:updateHash( s )
       else
         for _, v in ipairs(s) do
           self:addSprite(v)
@@ -108,7 +109,7 @@ function Layer:modifyHash( x, y, w, h, value )
 end
 
 function Layer:updateHash( sprite, oldx, oldy, oldw, oldh )
-  self:modifyHash( oldx, oldy, oldw, oldh, nil )
+  if oldx then self:modifyHash( oldx, oldy, oldw, oldh, nil ) end
   self:modifyHash( sprite.x, sprite.y, sprite.w, sprite.h, sprite )
 end
 

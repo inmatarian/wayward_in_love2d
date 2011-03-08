@@ -1,6 +1,8 @@
 
 local util = require 'util'
 
+----------------------------------------
+
 local state
 local focused = true
 local bgm
@@ -16,8 +18,8 @@ local startTime = love.timer.getMicroTime()
 local xscale = math.floor(love.graphics.getWidth() / 320)
 local yscale = math.floor(love.graphics.getHeight() / 240)
 
-local wayfont
-local wayfontset = [=[ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~]=]
+local font
+local fontset = [=[ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~]=]
 
 ----------------------------------------
 
@@ -34,6 +36,7 @@ function love.joystickreleased(j, b)
 end
 
 function love.keypressed(k, u)
+  print("pressed", k)
   keyp[k] = 0
   if k == "f10" then
     love.event.push("q")
@@ -103,7 +106,7 @@ function love.update(dt)
   updateJoy()
 
   if focused then
-    if dt > 0.035 then dt = 0.035 end
+    if dt > 0.4 then dt = 0.4 end
     state:update(dt)
   end
 end
@@ -114,10 +117,11 @@ function love.load()
   love.graphics.setBlendMode("alpha")
   hasJoy = (love.joystick.getNumJoysticks()>=1) and (love.joystick.isOpen(0))
 
-  local wayfontimage = love.graphics.newImage("wayfont.png")
-  wayfontimage:setFilter("nearest", "nearest")
-  wayfont = love.graphics.newImageFont(wayfontimage, wayfontset)
-  wayfont:setLineHeight( wayfontimage:getHeight()-1 )
+  local fontimage = love.graphics.newImage("wayfont.png")
+  fontimage:setFilter("nearest", "nearest")
+  font = love.graphics.newImageFont(fontimage, fontset)
+  font:setLineHeight( fontimage:getHeight()-1 )
+
 end
 
 ----------------------------------------
@@ -159,7 +163,7 @@ function friend.pressed(s)
 end
 
 function friend.font()
-  return wayfont
+  return font
 end
 
 ----------------------------------------

@@ -28,7 +28,7 @@ function Badness:init( nextState )
 end
 
 function Badness:update(dt)
-  if coroutine.status( self.co ) ~= "dead" then
+  if coroutine.status( self.co ) ~= "dead" and not friend.pressed("return") then
     coroutine.resume(self.co, self, dt)
   else
     friend.setState( self.nextState:new() )

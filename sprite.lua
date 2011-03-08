@@ -1,20 +1,16 @@
 
 local util = require 'util'
 local prototype = require 'prototype'
+local Tileset = require 'tileset'
 
 ----------------------------------------
 
+local image = nil
 
-local dirs = { "up", "down", "left", "right" }
-function testBehavior( self, dt )
-  self.clock = (self.clock or 0) + dt
-
-  if self.clock >= 3 then
-    self.clock = self.clock - 3
-    local t = math.random(1, 4)
-    self.dir = dirs[t]
-  else
-    self.dir = nil
+local function sprites()
+  if not image then
+    image = love.graphics.newImage("waysprites.png")
+    image:setFilter("nearest", "nearest")
   end
 end
 
@@ -26,9 +22,11 @@ local Sprite = prototype:clone {
   w = 0,
   h = 0,
   gid = 1,
-  dir = nil,
-  moving = nil,
-  excess = 0,
+  moving = false,
+  xexcess = 0,
+  yexcess = 0,
+  xtarget = nil,
+  ytarget = nil,
   speed = 64,
   layer = nil
 }
@@ -40,10 +38,6 @@ function Sprite:init( x, y )
     self.w = x.w
     self.h = x.h
     self.gid = x.gid
-    if x.type == "PLAYER" then
-      print("PLAYER FOUND!")
-      self.behavior = testBehavior
-    end
   elseif x or y then
     self.x = x
     self.y = y
@@ -61,10 +55,10 @@ function Sprite:isBlocked( dir )
 
   local cx, cy = self.layer:convToLayer( self.x, self.y )
 
-  if dir == "up" then cy = cy - 1
-  elseif dir == "down" then cy = cy + 1
-  elseif dir == "left" then cx = cx - 1
-  elseif dir == "right" then cx = cx + 1
+  if dir == "N" then cy = cy - 1
+  elseif dir == "S" then cy = cy + 1
+  elseif dir == "W" then cx = cx - 1
+  elseif dir == "E" then cx = cx + 1
   end
 
   return self.layer:isSolid( cx, cy )
@@ -72,77 +66,160 @@ end
 
 function Sprite:otherSprite( dir )
   local cx, cy = self.layer:convToLayer( self.x, self.y )
-  if dir == "up" then cy = cy - 1
-  elseif dir == "down" then cy = cy + 1
-  elseif dir == "left" then cx = cx - 1
-  elseif dir == "right" then cx = cx + 1
+  if dir == "N" then cy = cy - 1
+  elseif dir == "S" then cy = cy + 1
+  elseif dir == "W" then cx = cx - 1
+  elseif dir == "E" then cx = cx + 1
   end
 
   return self.layer:spriteAt( cx, cy )
 end
 
-function Sprite:update(dt)
+function Sprite:updatePosition(dt)
+  local xt, yt = self.xtarget, self.ytarget
+  if not self.moving then
+    return
+  end
+
   local oldx, oldy, oldw, oldh = self.x, self.y, self.w, self.h
-
-  if self.behavior then self:behavior(dt) end
-
+  local nx, ny = oldx, oldy
   local speed = self.speed * dt
-  local excess = self.excess
-  self.excess = 0
-  local inmove = self.moving~=nil
-  if (not inmove) and self.dir~=nil then
-    if self:isBlocked(self.dir) then return end
-    if self:otherSprite(self.dir) then return end
+  local xex, yex = self.xexcess, self.yexcess
+  self.xexcess, self.yexcess = 0, 0
+
+  if xt < oldx then
+    nx = oldx - speed - xex
+    if nx <= xt then
+      self.xexcess, nx, self.moving = xt-nx, xt, false
+    end
+  elseif xt > oldx then
+    nx = oldx + speed + xex
+    if nx >= xt then
+      self.xexcess, nx, self.moving = nx-xt, xt, false
+    end
   end
-  self.moving = self.moving or self.dir
+  self.x = nx
 
-  if self.moving=="up" then
-    local ny = self.y - speed - excess
-    local bar = math.floor(self.y/16)*16
-    if ny < bar and inmove then
-      self.excess = bar - ny
-      ny = bar
-      self.moving = nil
+  if yt < oldy then
+    ny = oldy - speed - yex
+    if ny <= yt then
+      self.yexcess, ny, self.moving = yt-ny, yt, false
     end
-    self.y = ny
-
-  elseif self.moving=="down" then
-    local ny = self.y + speed + excess
-    local bar = math.ceil(self.y/16)*16
-    if ny > bar and inmove then
-      self.excess = ny - bar
-      ny = bar
-      self.moving = nil
+  elseif yt > oldy then
+    ny = oldy + speed + yex
+    if ny >= yt then
+      self.yexcess, ny, self.moving = ny-yt, yt, false
     end
-    self.y = ny
-
-  elseif self.moving=="left" then
-    local nx = self.x - speed - excess
-    local bar = math.floor(self.x/16)*16
-    if nx < bar and inmove then
-      self.excess = bar - nx
-      nx = bar
-      self.moving = nil
-    end
-    self.x = nx
-
-  elseif self.moving=="right" then
-    local nx = self.x + speed + excess
-    local bar = math.ceil(self.x/16)*16
-    if nx > bar and inmove then
-      self.excess = nx - bar
-      nx = bar
-      self.moving = nil
-    end
-    self.x = nx
   end
+  self.y = ny
 
   self.layer:updateHash( self, oldx, oldy, oldw, oldh )
+end
+
+function Sprite:update(dt)
+  if self.behavior then self:behavior(dt) end
+  self:updatePosition(dt)
+end
+
+function Sprite:setMovement(dir)
+  if self.moving then return end
+  if self:isBlocked(dir) or self:otherSprite(dir) then return end
+
+  local x, y = math.floor(self.x/16)*16, math.floor(self.y/16)*16
+  if dir == "N" then self.xtarget, self.ytarget = x, y-16
+  elseif dir == "S" then self.xtarget, self.ytarget = x, y+16
+  elseif dir == "W" then self.xtarget, self.ytarget = x-16, y
+  elseif dir == "E" then self.xtarget, self.ytarget = x+16, y
+  end
+
+  self.moving = true
 end
 
 function Sprite:draw( camera )
   camera:drawTile( self.x, self.y, self.gid )
 end
+
+----------------------------------------
+
+local Actor = Sprite:clone()
+Sprite.Actor = Actor
+
+function Actor:init( x, y )
+  Sprite.init(self, x, y)
+  self.thread = coroutine.create( self.run )
+end
+
+function Actor:behavior(dt)
+  if coroutine.status( self.thread ) ~= "dead" then
+    local okay, message = coroutine.resume(self.thread, self, dt)
+    if not okay then error(message) end
+  end
+end
+
+function Actor:wait( count )
+  print("Waiting!", count)
+  while count > 0 do
+    local s, dt = coroutine.yield()
+    count = count - dt
+  end
+end
+
+function Actor:waitForMove()
+  while self.moving do
+    coroutine.yield()
+  end
+end
+
+local dirs = { "N", "S", "W", "E" }
+
+function Actor:move( dir, count )
+  count = count or 1
+  dir = dir:upper()
+  if dir == "R" then
+    dir = dirs[ math.random(1, 4) ]
+  end
+
+  if dir == "N" or dir == "S" or dir == "W" or dir == "E" then
+    self:setMovement(dir)
+  end
+
+  self:waitForMove()
+end
+
+function Actor:walk( path )
+  for dir, count in path:gmatch("(%S)(%d*)") do
+    count = tonumber(count) or 1
+    self:move(dir, count)
+  end
+end
+
+----------------------------------------
+
+local Enemy = Actor:clone()
+Actor.Enemy = Enemy
+
+----------------------------------------
+
+local Ruffian = Enemy:clone()
+Enemy.Ruffian = Ruffian
+
+function Ruffian:run(dt)
+  while true do
+    self:walk("IIIIRRRRIIIIHHHH")
+  end
+end
+
+----------------------------------------
+
+local TestActor = Actor:clone()
+
+function TestActor:run( dt )
+  while true do
+    self:wait(3)
+    self:move("R")
+  end
+end
+----------------------------------------
 
 function Sprite.gameLoadSprites( layername, layerprops, objects )
   print( "loadObjects: "..layername )
@@ -154,14 +231,25 @@ function Sprite.gameLoadSprites( layername, layerprops, objects )
   local sprites = {}
 
   for i, v in ipairs( objects ) do
-    local spr = Sprite:new( v )
+    local spr = Sprite.createNew( v )
     sprites[i] = spr
   end
 
   return sprites
 end
 
-return Sprite
+----------------------------------------
 
+function Sprite.createNew( t )
+  if t.type == "PLAYER" then
+    print("PLAYER FOUND!")
+    return TestActor:new(t)
+  else
+    return Sprite:new(t)
+  end
+end
+
+----------------------------------------
+return Sprite
 ----------------------------------------
 
