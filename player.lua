@@ -34,13 +34,21 @@ function Player:behavior(dt)
   end
 
   local moving = self.moving
-
-  if d == "up" then self:setMovement("N")
-  elseif d == "down" then self:setMovement("S");
-  elseif d == "left" then self:setMovement("W");
-  elseif d == "right" then self:setMovement("E");
+  local cardinal
+  if d == "up" then cardinal = "N"
+  elseif d == "down" then cardinal = "S";
+  elseif d == "left" then cardinal = "W";
+  elseif d == "right" then cardinal =  "E";
   end
   self.dir = d
+  if cardinal then
+    other = self:otherSprite(cardinal)
+    if other ~= nil then
+      self:send( "touched", other )
+    else
+      self:setMovement(cardinal)
+    end
+  end
 
   if not moving and self.moving and d and d ~= self.animator:getName() then
     self.animator:setPattern(d)

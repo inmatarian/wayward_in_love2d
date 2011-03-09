@@ -3,6 +3,10 @@ local util = require 'util'
 local prototype = require 'prototype'
 local Spriteset = require 'spriteset'
 local Animator = require 'animator'
+local Registry = require 'registry'
+
+----------------------------------------
+
 
 ----------------------------------------
 
@@ -21,16 +25,16 @@ local Sprite = prototype:clone {
   speed = 64,
   layer = nil,
   animator = nil,
-  spriteset = nil
+  spriteset = nil,
+  registry = nil,
+  name = nil
 }
 
 function Sprite:init( x, y )
   if type(x)=="table" then
-    self.x = x.x
-    self.y = x.y
-    self.w = x.w
-    self.h = x.h
-    self.gid = x.gid
+    for k, v in pairs(x) do
+      self[k] = v
+    end
   elseif x or y then
     self.x = x
     self.y = y
@@ -40,6 +44,13 @@ function Sprite:init( x, y )
 
   if Sprite.spriteset == nil then
     Sprite.spriteset = Spriteset:new()
+  end
+  if Sprite.registry == nil then
+    Sprite.registry = Registry:new()
+  end
+  if self.name ~= nil then
+    print("Registering", self.name, self )
+    self.registry:register( self.name, self )
   end
 
   self.animator = Animator:new( self.gid )
@@ -71,7 +82,8 @@ function Sprite:otherSprite( dir )
   elseif dir == "E" then cx = cx + 1
   end
 
-  return self.layer:spriteAt( cx, cy )
+  local spr = self.layer:spriteAt( cx, cy )
+  if spr ~= self then return spr end
 end
 
 function Sprite:updatePosition(dt)
@@ -115,8 +127,14 @@ function Sprite:updatePosition(dt)
   self.layer:updateHash( self, oldx, oldy, oldw, oldh )
 end
 
+function Sprite:behavior()
+  if self.name then
+    self.registry:clearMessages( self.name )
+  end
+end
+
 function Sprite:update(dt)
-  if self.behavior then self:behavior(dt) end
+  self:behavior(dt)
   self:updatePosition(dt)
   self.animator:update(dt)
   self.gid = self.animator:getFrame()
@@ -124,7 +142,7 @@ end
 
 function Sprite:setMovement(dir)
   if self.moving then return end
-  if self:isBlocked(dir) or self:otherSprite(dir) then return end
+  if self:isBlocked(dir) or self:otherSprite(dir) then return false end
 
   local x, y = math.floor(self.x/16)*16, math.floor(self.y/16)*16
   if dir == "N" then self.xtarget, self.ytarget = x, y-16
@@ -135,10 +153,27 @@ function Sprite:setMovement(dir)
   self.lastdir = dir
   self.xexcess, self.yexcess = 0, 0
   self.moving = true
+  return true
 end
 
 function Sprite:draw( offx, offy )
   self.spriteset:draw( self.x - offx, self.y - offy, self.gid )
+end
+
+function Sprite:send( message, other )
+  if other then
+    other:send( message )
+  elseif self.name ~= nil then
+    self.registry:send( self.name, message )
+  end
+end
+
+function Sprite:receive()
+  return self.registry:receive( self.name )
+end
+
+function Sprite:hasMessages()
+  return self.registry:hasMessages( self.name )
 end
 
 ----------------------------------------
@@ -146,15 +181,15 @@ end
 local Actor = Sprite:clone()
 Sprite.Actor = Actor
 
-function Actor:init( x, y )
+function Actor:init( x, y, name )
+  self.name = name
   Sprite.init(self, x, y)
   self.thread = coroutine.create( self.run )
 end
 
 function Actor:behavior(dt)
   if coroutine.status( self.thread ) ~= "dead" then
-    local okay, message = coroutine.resume(self.thread, self, dt)
-    if not okay then error(message) end
+    util.coErrorWrap( coroutine.resume(self.thread, self, dt) )
   end
 end
 
@@ -222,6 +257,10 @@ function TestActor:run( dt )
   while true do
     self:wait(3)
     self:walk("RFFF")
+    while self:hasMessages() do
+      local m = self:receive()
+      print( "Message:", type(m), m )
+    end
   end
 end
 

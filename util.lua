@@ -1,12 +1,12 @@
 
-----------------------------------------
-
 local io = io
 local math = math
 local table = table
 local type = type
 
+----------------------------------------
 local util = {}
+----------------------------------------
 
 local function sortcomp( l, r )
   if type(l)=="number" and type(r)=="string" then return false end
@@ -57,7 +57,64 @@ function util.truncate( x, p )
   return math.floor(x/p)*p
 end
 
-return util
+function util.coErrorWrap(...)
+  local ok = select(1, ...)
+  local mesg = select(2, ...)
+  if not ok then error(message) end
+  return ...
+end
 
+----------------------------------------
+
+local Queue = {}
+util.Queue = Queue
+
+function Queue:new()
+  local t = { front=0, back=0 }
+  t.__index = self
+  return setmetatable( t, t )
+end
+
+function Queue:size()
+  return self.back - self.front
+end
+
+function Queue:pushFront(x)
+  self.front = self.front - 1
+  self[self.front] = x
+end
+
+function Queue:pushBack(x)
+  self[self.back] = x
+  self.back = self.back + 1
+end
+
+function Queue:popFront()
+  if self.front >= self.back then return end
+  local v = self[self.front]
+  self[self.front] = nil
+  self.front = self.front + 1
+  if self.front >= self.back then self.front, self.back = 0, 0 end
+  return v
+end
+
+function Queue:popBack()
+  if self.front >= self.back then return end
+  self.back = self.back - 1
+  local v = self[self.back]
+  self[self.back] = nil
+  if self.front >= self.back then self.front, self.back = 0, 0 end
+  return v
+end
+
+function Queue:clear()
+  for i = self.front, self.back do
+    self[i] = nil
+  end
+  self.front, self.back = 0, 0
+end
+
+----------------------------------------
+return util
 ----------------------------------------
 
