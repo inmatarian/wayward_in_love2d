@@ -1,18 +1,8 @@
 
 local util = require 'util'
 local prototype = require 'prototype'
-local Tileset = require 'tileset'
-
-----------------------------------------
-
-local image = nil
-
-local function sprites()
-  if not image then
-    image = love.graphics.newImage("waysprites.png")
-    image:setFilter("nearest", "nearest")
-  end
-end
+local Spriteset = require 'spriteset'
+local Animator = require 'animator'
 
 ----------------------------------------
 
@@ -27,8 +17,11 @@ local Sprite = prototype:clone {
   yexcess = 0,
   xtarget = nil,
   ytarget = nil,
+  lastdir = "I",
   speed = 64,
-  layer = nil
+  layer = nil,
+  animator = nil,
+  spriteset = nil
 }
 
 function Sprite:init( x, y )
@@ -44,6 +37,12 @@ function Sprite:init( x, y )
     self.w = 16
     self.h = 16
   end
+
+  if Sprite.spriteset == nil then
+    Sprite.spriteset = Spriteset:new()
+  end
+
+  self.animator = Animator:new( self.gid )
 end
 
 function Sprite:setLayer( l )
@@ -119,6 +118,8 @@ end
 function Sprite:update(dt)
   if self.behavior then self:behavior(dt) end
   self:updatePosition(dt)
+  self.animator:update(dt)
+  self.gid = self.animator:getFrame()
 end
 
 function Sprite:setMovement(dir)
@@ -131,12 +132,13 @@ function Sprite:setMovement(dir)
   elseif dir == "W" then self.xtarget, self.ytarget = x-16, y
   elseif dir == "E" then self.xtarget, self.ytarget = x+16, y
   end
-
+  self.lastdir = dir
+  self.xexcess, self.yexcess = 0, 0
   self.moving = true
 end
 
-function Sprite:draw( camera )
-  camera:drawTile( self.x, self.y, self.gid )
+function Sprite:draw( offx, offy )
+  self.spriteset:draw( self.x - offx, self.y - offy, self.gid )
 end
 
 ----------------------------------------
@@ -157,7 +159,6 @@ function Actor:behavior(dt)
 end
 
 function Actor:wait( count )
-  print("Waiting!", count)
   while count > 0 do
     local s, dt = coroutine.yield()
     count = count - dt
@@ -172,11 +173,15 @@ end
 
 local dirs = { "N", "S", "W", "E" }
 
+-- N.orth, S.outh, W.est, E.ast, R.andom, F.low, T.oward, A.way, H.op, I.dle.
+
 function Actor:move( dir, count )
   count = count or 1
   dir = dir:upper()
   if dir == "R" then
     dir = dirs[ math.random(1, 4) ]
+  elseif dir == "F" then
+    dir = self.lastdir
   end
 
   if dir == "N" or dir == "S" or dir == "W" or dir == "E" then
@@ -216,9 +221,10 @@ local TestActor = Actor:clone()
 function TestActor:run( dt )
   while true do
     self:wait(3)
-    self:move("R")
+    self:walk("RFFF")
   end
 end
+
 ----------------------------------------
 
 function Sprite.gameLoadSprites( layername, layerprops, objects )

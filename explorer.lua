@@ -7,6 +7,7 @@ local Sprite = require 'sprite'
 local Tileset = require 'tileset'
 local Layer = require 'layer'
 local RichText = require 'richtext'
+local Player = require 'player'
 
 ----------------------------------------
 
@@ -26,36 +27,6 @@ end
 
 function Camera:reset()
   self.x, self.y = Camera.x, Camera.y
-end
-
-----------------------------------------
-
-local Player = Sprite:clone()
-
-function Player:init(...)
-  Sprite.init(self, ...)
-  self.dir = nil
-end
-
-function Player:behavior(dt)
-  local d = self.dir
-  if not self.dir or not friend.pressed(self.dir) then
-    if friend.pressed("up") then d = "up"
-    elseif friend.pressed("down") then d = "down"
-    elseif friend.pressed("left") then d = "left"
-    elseif friend.pressed("right") then d = "right"
-    else d = nil end
-  end
-
-  if d == "up" then self:setMovement("N")
-  elseif d == "down" then self:setMovement("S");
-  elseif d == "left" then self:setMovement("W");
-  elseif d == "right" then self:setMovement("E");
-  end
-  self.dir = d
-
-  if friend.pressed("f9") == 1 then self.x, self.y = 32, 32 end
-  if friend.pressed("f8") == 1 then self.layer:inspect() end
 end
 
 ----------------------------------------
@@ -106,9 +77,9 @@ function Explorer:draw()
   self.layer:draw( self.tileset )
   self.camera:reset()
   self.camera:translate( self.layer.sx, self.layer.sy )
-  self.player:draw( self.camera )
+  self.player:draw( self.camera.x, self.camera.y )
   for _, v in ipairs(self.sprites) do
-    v:draw( self.camera )
+    v:draw( self.camera.x, self.camera.y )
   end
   self:inspect()
 end
